@@ -2,9 +2,6 @@
 # every time a there is a new symbol-edge in the chart, any callbacks associated with that position
 # are called. what they should do is verify that the new symbol is interesting, and if it is,
 # generate a new symbol
-chartl = {}
-chartr = {}
-
 rules = [
   ([1,2], 1),
   ([1,3], 3)
@@ -39,28 +36,72 @@ def term:
     return symbol in self.symbols
 
 class partial:
-  def __init__(self, pattern):
+  def __init__(self, pos, terms):
     self.matchs = set()
-    self.pattern = pattern
-    self.len = len(self.pattern)
+    self.terms = terms
+    self.l_pos = {}
+    self.r_pos = {}
+    self.len = len(self.terms)
+    self.children = []
     
-  def matched(n): # the n'th term got matched
+  def __init__(self, other):
+    self.matches = other.matches
+    self.terms = other.terms
+    self.l_pos = other.l_pos
+    self.r_pos = other.r_pos
+    self.len = other.len
+    self.children = []
+    
+  def clone(self):
+    child = partial(self)
+    self.children.append(child)
+    
+  def satisfied(self):
+    for i in range(len):
+      if i not in self.matches and not i.optional:
+        return false
+      return true
+    
+  def matched(self, n): # the n'th term got matched
     self.matches.add(n)
     r = n + 1
     l = n - 1
     if r not in self.matches:
       while r < len:
-        chart.add(self, pattern[r], r)
-        if not pattern[r].optional:
+        chart.add_r_trigger(self, r_pos[r], self, r)
+        if not terms[r].optional:
           break
+          
     if l not in self.matches:
       while l >= 0:
-        chart.add(self, pattern[l], l)
-        if not pattern[l].optional:
+        chart.add_l_trigger(self, l_pos[l], self, l)
+        if not terms[l].optional:
           break
+          
+# trigger 
+class chart:
+  def __init__(self, symbols):
+    self.l_symbols = {}
+    self.r_symbols = {}
+    for (sym, l, r) in symbols:
+      self.add_l_symbol(l, sym)
+      self.add_r_symbol(r, sym)
+    self.l_triggers = {}
+    self.r_triggers = {}
     
-d
+  def add_l_trigger(self, pos, partial, n):
+    self.l_triggers[pos] = (partial, n)
   
+  def add_r_trigger(self, pos, partial, n):
+    self.r_triggers[pos] = (partial, n)
+        
+  def add_l_symbol(self, pos, partial):
+    pass.l_symbols[pos] = partial
+  
+  def add_r_symbol(self, pos, sym):
+    pass.r_symbols[pos] = partial
+    
+    
         
         
   
