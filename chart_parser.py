@@ -18,9 +18,10 @@ class fragment:
           
 # trigger 
 class chart:
-  def __init__(self, symbols):
+  def __init__(self, symbols, rules):
     self.symbols = {}
-    for (sym, l, r) in symbols:
+    self.rules = {}
+    for (l, r, sym) in symbols:
       self.add_symbol(l, sym)
     self.triggers = {}
     
@@ -31,6 +32,14 @@ class chart:
     self.symbols[(pos, type)] = symbol
     [t.grow(symbol, pos) for t in self.triggers.get((pos, type), [])
     
+ch = chart([(1,2,"a"),(2,3,"b"),(3,4,"c")],
+  {"start": [
+    ["a","b","c"],
+    ["c","b","a"]
+  ]})
+  
+  
+
 
       
     
