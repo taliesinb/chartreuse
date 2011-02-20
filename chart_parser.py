@@ -14,22 +14,24 @@ class symbol:
     return str(self.value)
 
 def copy_fragment(frag):
-  return fragment(frag.chart, frag.left, frag.right, frag.remaining, frag.matched, frag.type)
+  return fragment(frag.chart, frag.left, frag.right, frag.pattern, frag.action, frag.matched, frag.type)
   
-def new_fragment(chart, pos, type, symbols):
-  return fragment(chart, pos, pos, symbols, [], type)
+def new_fragment(chart, pos, type, pattern, action):
+  print "new with pattern", pattern
+  return fragment(chart, pos, pos, pattern, action, [], type)
 
 class fragment:    
-  def __init__(self, chart, left, right, remaining, matched, type):
+  def __init__(self, chart, left, right, pattern, action, matched, type):
     self.chart = chart
     self.left = left
     self.right = right
-    self.remaining = copy(remaining)
+    self.action = action
+    self.pattern = copy(pattern)
     self.matched = copy(matched)
     self.type = type
     
   def next_type(self):
-    return self.remaining[0]
+    return self.pattern[0]
     
   def next_pos(self):
     return self.right
@@ -37,21 +39,19 @@ class fragment:
   def grow(self, sym, pos):
     print "fragment of type", self.type, "growing using symbol", sym.type
     assert self.right == pos[0]
-    assert self.remaining
-    assert sym.type == self.remaining.pop(0)
+    assert self.pattern
+    assert sym.type == self.pattern.pop(0)
     self.matched.append(sym)
     self.right = pos[1]
-    if self.remaining: 
+    if self.pattern: 
       self.chart.add_edge(self)
       self.chart.predict(self.next_pos(), self.next_type())
     else:
-      match = self.matched
-      if len(match) == 1: 
-        match = match[0]
-      self.chart.add_symbol((self.left, self.right), symbol(self.type, match))
+      self.chart.add_symbol((self.left, self.right), symbol(self.type, self.action(*self.matched)))
       print "finished", self.type, "by matching", [m.type for m in self.matched]
   
   def __repr__(self):
+    return self.type + ":\t" + (' '.join(map(lambda x: str(x.type), self.matched)) + ' | ' + ' '.join(map(str,self.pattern))).strip() + '\t\t' + ','.join(map(lambda x: str(x.value),self.matched))
     return "<" + ','.join(map(str, [self.type, self.left, self.right, self.matched])) + '>'
     
   def __hash__(self):
@@ -81,15 +81,13 @@ class chart:
       copy_fragment(frag).grow(symbol, pos)
     
   def predict(self, pos, type):
-    for rule in rules.get(type,[]):
-      print "predicting fragment", "'" + type + "'", "at", pos, "via", rule
-      predict = (pos, rule[0]) not in self.edges
-      
-      self.add_edge(new_fragment(self, pos, type, rule))
+    for pattern, action in rules.get(type,{}):
+      print "predicting fragment", "'" + type + "'", "at", pos, "via pattern", pattern
+      first_symbol = pattern[0]
+      predict = (pos, first_symbol) not in self.edges
+      self.add_edge(new_fragment(self, pos, type, pattern, action))
       if predict:        
-        self.predict(pos, rule[0])
-      else:
-        print (pos, rule[0]), "is already in edges"
+        self.predict(pos, first_symbol)
   
   def add_symbol(self, pos, symbol):
     print "adding symbol", symbol.type, "at", pos
@@ -103,12 +101,13 @@ tokens = [
   (0,1, symbol("a", "A1")),
   (1,2, symbol("a", "A2")),  
   (2,3, symbol("a", "A3")),
-  (3,4, symbol("a", "A4")),
-  (4,5, symbol("b", "B"))]
+  (3,4, symbol("b", "B1")),
+  (4,5, symbol("b", "B2"))]
   
 rules = {}
-rules["start"] = [["A", "b"]]
-rules["A"] = [["A", "A"], ["a"]]
+rules["start"] = [(["A", "B"], lambda x, y: (x,y))]
+rules["A"] = [(["A", "A"], lambda x, y: (x,y)), (["a"], lambda x: "a")]
+rules["B"] = [(["a", "b", "b"], lambda x, y, z: (x,y,z)), (["a"], lambda x: "a")]
 
 ch = chart(tokens, rules)
 print
@@ -123,7 +122,10 @@ else:
 
 print
 print "edges:"
-print ch.edges
+for pos, edge in sorted(ch.edges.items()):
+  if edge: 
+    print pos, "\n\t", '\n\t'.join(map(str,edge))
+  print
 
 print "done"
 

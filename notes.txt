@@ -1,8 +1,0 @@
-so this is purely L->R parser so far.
-
-So when we put down a trigger we can instantiate fragments at the trigger position. of course terminal fragments can just look ahead to see
-if their tokens are there already, and quit if not. so this will be depth first if we immediately ask symbols to grow.
-
-how will this growing work?
-
-so we have a blank match. it adds a trigger at its position for its first token. 
