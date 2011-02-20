@@ -87,7 +87,7 @@ tokens = [
 rules = {}
 rules["start"] = [["a", "b", "c"], ["c","b","a"]]
 rules["middle"] = [["a", "end", "c"]]
-#rules["end"] = [["b"], ["bb"]]
+rules["end"] = [["b"], ["bb"]]
 
 ch = chart(tokens, rules)
 
