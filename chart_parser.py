@@ -5,6 +5,8 @@ class symbol:
     self.type = type
     self.value = None
 
+# a fragment is a pair of symbols to match, a left and right extent, and the actual matched symbols
+
 class fragment:
   def __init__(self, chart, pos, type, symbols):
     self.chart = chart
@@ -27,10 +29,10 @@ class fragment:
     self.right = pos[1]
     if self.remaining: 
       self.chart.add_trigger(self)
-      self.chart.predict(next_pos(), next_type())
+      self.chart.predict(self.next_pos(), self.next_type())
     else:
       self.chart.add_symbol((self.left, self.right), symbol(self.type))
-      print "finished ", self.type, "by matching", self.matched
+      print "finished", self.type, "by matching", [m.type for m in self.matched]
           
 # trigger 
 class chart:
@@ -38,17 +40,19 @@ class chart:
     self.symbols = {}
     self.triggers = {}
     self.rules = rules
+    self.predict(0, "start")
     for (l, r, t) in tokens:
       self.add_symbol((l,r), t)
-    predict(0, "start")
     
   def add_trigger(self, frag):
+    print "adding trigger for:", frag.type, "at", frag.next_pos(), "on", frag.next_type()
     type = frag.next_type()
     pos = frag.next_pos()
-    self.triggers.setdefault((pos,type), []).append(fragment)
+    self.triggers.setdefault((pos,type), []).append(frag)    
     
   def predict(self, pos, type):
     for rule in rules.get(type,[]):
+      print "predicting fragment", type, "at", pos, "via", rule
       self.add_trigger(fragment(self, pos, type, rule))
   
   def add_symbol(self, pos, symbol):
@@ -59,6 +63,7 @@ class chart:
 tokens = [
   (0,2, symbol("a")),
   (2,3, symbol("b")),
+  (2,5, symbol("b")),
   (3,5, symbol("c"))]
 rules = {}
 rules["start"] = [["a", "b", "c"], ["c","b","a"]]
