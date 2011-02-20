@@ -94,8 +94,7 @@ tokens = [
   (0,1, symbol("a", "A1")),
   (1,2, symbol("a", "A2")),  
   (2,3, symbol("a", "A3")),
-  (3,4, symbol("a", "A4")),
-  (4,5, symbol("b", "B"))]
+  (3,5, symbol("b", "B"))]
   
 rules = {}
 rules["start"] = [["A", "b"]]
