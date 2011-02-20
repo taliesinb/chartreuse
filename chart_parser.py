@@ -50,7 +50,16 @@ class fragment:
         match = match[0]
       self.chart.add_symbol((self.left, self.right), symbol(self.type, match))
       print "finished", self.type, "by matching", [m.type for m in self.matched]
-          
+  
+  def __repr__(self):
+    return "<" + ','.join(map(str, [self.type, self.left, self.right, self.matched])) + '>'
+    
+  def __hash__(self):
+    return hash(self.type) + sum(map(hash, self.matched)) + hash(self.left) + hash(self.right)
+    
+  def __eq__(self, other):
+    return self.type == other.type and self.left == other.left and self.right == other.right and self.matched == other.matched
+              
 # edge 
 class chart:
   def __init__(self, tokens, rules):
@@ -94,7 +103,8 @@ tokens = [
   (0,1, symbol("a", "A1")),
   (1,2, symbol("a", "A2")),  
   (2,3, symbol("a", "A3")),
-  (3,5, symbol("b", "B"))]
+  (3,4, symbol("a", "A4")),
+  (4,5, symbol("b", "B"))]
   
 rules = {}
 rules["start"] = [["A", "b"]]
@@ -110,6 +120,10 @@ else:
   print "full chart:"
   for key, symbol in ch.symbols.items():
     print key[0], " -> ", symbol
+
+print
+print "edges:"
+print ch.edges
 
 print "done"
 
