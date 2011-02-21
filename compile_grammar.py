@@ -1,6 +1,7 @@
 #!/usr/bin/python
 
 from collections import defaultdict
+from itertools import combinations
 
 """
 what can productions look like?
@@ -46,8 +47,43 @@ def doalt(terms, name):
 # make grammar symbol for each pair
 # sym12 -> [1,2], [2,1] sym13 -> [1,3],[3,1] sym23 -> [2,3],[3,2]
 # sym123 -> [sym[12], 3], [3, sym[12]]
+
+def flatten(lists):
+  if type(lists) in [list, tuple]:
+    return reduce((lambda x,y: x + y), (flatten(f) for f in lists))
+  else:
+    return [lists]
+
+def intstr(ints):
+  return ''.join(map(str, sorted(ints)))
+
 def dobag(terms, name):
-  
+  items = terms.items()
+  length = len(terms)
+  subsets = []
+  for i in range(2, length+1):
+    for perm in combinations(range(length), i):
+      name2 = name + "_" + intstr(perm)
+      subsets.append(name2)
+      sub = set()
+      for k in range(length):
+        if k in perm:
+          without = name2.replace(str(k), "")
+          below = list(perm)
+          below.remove(k)
+          suffix = name + "_" + intstr(below)
+          sub.add((suffix, name + "_" + str(k)))
+          sub.add((name + "_" + str(k), suffix))
+      rules[name2] = map(list, list(sub))
+      
+  rhs = [doterm(item[1], new_name(name)) for item in items]
+  for i in range(length):
+    name2 = name + "_" + str(i)
+    subsets.append(name2)
+    rules[name2].append(rhs[i])
+    
+  rules[name] = subsets
+  return name
         
 def doterm(term, name):
   t = type(term)
@@ -89,16 +125,24 @@ def optimize():
       if items[i][1] == items[j][1]:
         rewrite[name2] = name1
         del rules[name2]
-  print "rewriting:"
+
+  for sym, pattern in rules.items():
+    if type(pattern) == list and len(pattern) == 1 and type(pattern[0]) == str:
+        rewrite[sym] = pattern[0]
+        del rules[sym]
+        
+  if len(rewrite):
+    print "optimization:"
   for a,b in rewrite.items():
-    print a.ljust(20), "->", b
+    print "\t", a.ljust(20), "->", b
   for key in rules:
     rules[key] = replace_in_list(rules[key], rewrite)
        
-dolist(["a",("b",),(["d","e"],"de",[]),"f","g"],"mylist")
+dobag({1:"a",2:["b","c"],3:"c"}, "start")
+#dolist(["a","b","c",,"d","e","f"], "start")
 
 optimize()
 print
 print "rules:"
 for n, r in rules.items():
-  print n.ljust(20), r
+  print "\t", n.ljust(20), r
