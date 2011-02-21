@@ -35,7 +35,7 @@ class fragment:
     return self.span[1]
                 
   def grow(self, sym):
-    print "fragment of type", self.type, "growing using symbol", sym.type
+    #print "fragment of type", self.type, "growing using symbol", sym.type
     assert self.next_pos() == sym.span[0]
     assert self.pattern
     assert sym.type == self.pattern.pop(0)
@@ -46,7 +46,7 @@ class fragment:
       self.chart.predict(self.next_pos(), self.next_type())
     else:
       self.chart.add_symbol(symbol(self.type, self.action(*self.matched), self.span))
-      print "finished", self.type, "by matching", [m.type for m in self.matched]
+      #print "finished", self.type, "by matching", [m.type for m in self.matched]
   
   def __repr__(self):
     return self.type + ":\t" + (' '.join(map(lambda x: str(x.type), self.matched)) + ' | ' + ' '.join(map(str,self.pattern))).strip() + '\t\t' + ','.join(map(lambda x: str(x.value),self.matched))
@@ -76,7 +76,7 @@ class chart:
     return winners
         
   def add_edge(self, frag):
-    print "adding edge for:", frag.type, "at", frag.next_pos(), "on", frag.next_type()
+    #print "adding edge for:", frag.type, "at", frag.next_pos(), "on", frag.next_type()
     type = frag.next_type()
     pos = frag.next_pos()
     self.edges[(pos,type)].add(frag)
@@ -85,7 +85,7 @@ class chart:
     
   def predict(self, pos, type):
     for pattern, action in rules.get(type,{}):
-      print "predicting fragment", "'" + type + "'", "at", pos, "via pattern", pattern
+      #print "predicting fragment", "'" + type + "'", "at", pos, "via pattern", pattern
       first_symbol = pattern[0]
       predict = (pos, first_symbol) not in self.edges
       self.add_edge(new_fragment(self, pos, type, pattern, action))
@@ -93,11 +93,11 @@ class chart:
         self.predict(pos, first_symbol)
   
   def add_symbol(self, symbol):
-    print "adding symbol", symbol.type, "at", symbol.span
+    #print "adding symbol", symbol.type, "at", symbol.span
     key = (symbol.span[0], symbol.type)
     self.symbols[key].add(symbol)
     for frag in self.edges[key]:
-      print "symbol triggered edge:\t", frag
+      #print "symbol triggered edge:\t", frag
       copy_fragment(frag).grow(symbol) 
       
   def print_edges(self):
@@ -121,7 +121,7 @@ tokens = [
 rules = {}
 rules["start"] = [(["A", "B"], lambda x, y: (x,y))]
 rules["A"] = [(["A", "A"], lambda x, y: (x,y)), (["a"], lambda x: "a")]
-rules["B"] = [(["a", "b", "b"], lambda x, y, z: (x,y,z)), (["a"], lambda x: "a")]
+rules["B"] = [(["a", "b", "b"], lambda x, y, z: (x,y,z)), (["b"], lambda x: "b")]
 
 ch = chart(tokens, rules)
 
@@ -131,7 +131,7 @@ print "winners:"
 for w in winners:
   print "\t", winners
 
-if not winners:  
+if winners:  
   print
   print "chart:"
   ch.print_symbols()
