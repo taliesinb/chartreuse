@@ -1,6 +1,6 @@
 #!/usr/bin/python
 from collections import defaultdict
-from itertools import combinations
+from itertools import combinations, groupby
 
 rules = defaultdict(list)
 names = defaultdict(int)
@@ -8,28 +8,27 @@ names = defaultdict(int)
 # create a new unique name based on original name
 def new_name(name):
   names[name] += 1  
-  return name + "_" + str(names[name])
+  return name + "" + str(names[name])
+  
+def tostr(arg):
+  if type(arg) in [list, tuple]:
+    return ''.join(map(tostr, arg))
+  else:
+    return str(arg)
+  
+def join_name(*names):
+  return  ''.join(map(tostr, names))
 
 # is this term an optional term (= a singleton tuple)
 def optionalQ(term):
   return type(term) == tuple and len(term) == 1
   
+from itertools import groupby
+
 # handle a term that is a list of consecutive clauses
 def dolist(terms, name):
-  rules[name].append(dolist_recurse(terms, name))
+  rules[name] = [[doterm(symbol, new_name(name)) for symbol in terms]]
   return name
-  
-def dolist_recurse(terms, name):
-  #print "dolist on", terms
-  if len(terms) == 0: 
-    return []
-  term_name = new_name(name)
-  if optionalQ(terms[0]):
-    rules[term_name].append(dolist_recurse([terms[0][0]] + terms[1:], name))
-    rules[term_name].append(dolist_recurse(terms[1:], name))
-    return [term_name]
-  else:
-    return [doterm(terms[0], term_name)] + dolist_recurse(terms[1:], name)
 
 # handle a term that is a list of alternative clauses      
 def doalt(terms, name):
@@ -37,50 +36,52 @@ def doalt(terms, name):
     rules[name].append(term)
   return name
   
-# make a string out of a list of ints
-def intstr(ints):
-  return ''.join(map(str, sorted(ints)))
+def doopt(term, name):
+  rules[name] = [[], doterm(term, name)]
+  return name
 
 # handle a term that is a bag-of-clauses, returning its name
 def dobag(terms, name):
-  items = terms.items()
   length = len(terms)
-  subsets = []
+  valid_super_names = []
+  unit_names = [join_name(name, k) for k in range(length)]
+
   for i in range(2, length+1):
     for perm in combinations(range(length), i):
-      name2 = name + "_" + intstr(perm)
+      super_name = join_name(name, perm)
       if 0 in perm:
-        subsets.append(name2)
-      sub = set()
+        valid_super_names.append(super_name)
+      sub_rules = set()
       for k in range(length):
         if k in perm:
-          without = name2.replace(str(k), "")
-          below = list(perm)
-          below.remove(k)
-          suffix = name + "_" + intstr(below)
-          sub.add((suffix, name + "_" + str(k)))
-          sub.add((name + "_" + str(k), suffix))
-      rules[name2] = map(list, list(sub))
+          sub_perm = list(perm)
+          sub_perm.remove(k)
+          sub_name = join_name(name, sub_perm)
+          sub_rules.add((sub_name, unit_names[k]))
+          sub_rules.add((unit_names[k], sub_name))
+      rules[super_name] = map(list, list(sub_rules))
       
-  rhs = [doterm(item[1], new_name(name)) for item in items]
+  rhs = [doterm(symbol, new_name(name)) for symbol in terms.keys()]
   
-  for i in range(length):
-    name2 = name + "_" + str(i)
-    rules[name2].append(rhs[i])
+  for unit_name, term in zip(unit_names, rhs):
+    rules[unit_name].append(term)
     
-  subsets.append(name + "_0")
-  rules[name] = subsets
+  valid_super_names.append(join_name(name, "0"))
+  rules[name] = valid_super_names
   return name
         
 # dispatch on a term according to its type
 def doterm(term, name):
   t = type(term)
   if t == list:
-    return dolist(term, name + "_list")
+    return dolist(term, name + "L")
   if t == tuple:
-    return doalt(term, name + "_alts")
+    if len(term) == 1:
+      return doopt(term[0], name + "?")
+    else:
+      return doalt(term, name + "A")
   if t == dict:
-    return dobag(term, name + "_bag")
+    return dobag(term, name + "B")
   if t == str:
     return term
          
@@ -124,7 +125,12 @@ def optimize():
       print "\t", a.ljust(20), "->", b
 
 # test a fixed list containing various other types of clauses
-dolist(["a", {"j1":"foo", "j2":"bar", "j3":"baz"}, ["c","d"], ("e","f"), ("g",), "h","i"], "start")
+expr = ["a", {"j1":"foo", "j2":"bar", "j3":"baz"}, ["c","d"], ("e","f"), ("g",), "h","i", (["j1","j2"],)]
+expr = ["one","1.5","1.6","1.7", ("two?",), ("2.5?",), "three", "four", (["five1","five2"],)]
+dolist(expr, "start")
+
+print expr
+print
 
 optimize()
 
