@@ -1,12 +1,12 @@
 
-def flatten(*xs):
+def flatten(xs):
   f = []
   for x in xs:
     if type(x) == list:
-      f += x
+      f += flatten(x)
     else:
-      f.append(x)
-  return x
+      f.append(x) 
+  return f
 
 def first(x, *y):
   return x
@@ -29,4 +29,3 @@ def list_replace(x, reps):
     return [list_replace(e,reps) for e in x]
   else:
     return reps.get(x,x)
-

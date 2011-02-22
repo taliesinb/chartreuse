@@ -1,65 +1,12 @@
-#!/usr/bin/python
-from collections import defaultdict
-from itertools import combinations, groupby
-from parser_rule import rule
-from utils import flatten, identity, stringify, first
+from rules import *
+from compiler import *
 
-def tosym(x):
-  if type(x) == str:
-    return symbol(x)
+def singleton(x):
+  if type(x) == str or type(x) == pattern:
+    return [x]
   else:
     return x
-    
-def tosyms(exps):
-  return map(tosym, exps)
-      
-def join_name(*names):
-  return  ''.join(map(stringify, names))
 
-class context(object):
-  def __init__(self):
-    self.rules = defaultdict(list)
-    self.names = defaultdict(int)
-
-  def compile(self, rules):
-    for r in rules:
-      r.pattern.set_context(self)
-      name = r.pattern.compile(r.symbol)
-      if name != r.symbol:
-        self.rules[r.symbol].append(rule(r.symbol, [name], identity))
-      
-  def optimize(self):
-    rewrite = {}
-    items = list(sorted(self.rules.items()))
-    length = len(items)
-    for sym1, list1 in range(length-1):
-      name1 = items[i][0]
-      for j in range(i+1, length):
-        name2 = items[j][0]
-        if items[i] == items[j]:
-          rewrite[name2] = name1
-          rename_symbol(rewrite)
-  
-    for sym, rulelist in items:
-      if len(rulelist) == 1:
-        only = rulelist[0]
-        if type(only) == str:
-          rewrite[sym] = only
-          rename_symbol(rewrite)
-        elif type(only) == list and len(only) == 1 and type(only[0]) == str:
-          rewrite[sym] = only[0]
-          rename_symbol(rewrite)
-          
-    if len(rewrite):
-      print "optimization:"
-      for a,b in rewrite.items():
-        print "\t", a.ljust(20), "->", b
-
-  def rename_symbol(self, reps):
-    for symbol, rulelist in rules:
-      for i in range(len(rulelist)):
-        rules[symbol][i].rewrite(reps)
-  
 class pattern(object):
   def __init__(self, *terms):
     self.terms = tosyms(terms)
@@ -79,7 +26,16 @@ class pattern(object):
   def append(self, rule):
     self.context.rules[rule.symbol].append(rule)
 
-class symbol(pattern):
+def tosym(x):
+  if type(x) == str:
+    return sym(x)
+  else:
+    return x
+    
+def tosyms(exps):
+  return map(tosym, exps)
+
+class sym(pattern):
   def __init__(self, name):
     self.name = name
     
@@ -150,27 +106,3 @@ class bag(pattern):
     for super_name in valid_super_names:
       self.append(rule(name, super_name, identity))
     return name
-
-# test a fixed list containing various other types of clauses
-expr = seq("a", "b", seq("c", "d"), opt("e"), "g", "h")
-expr = bag(a="aye", b="bee", c="see")
-
-c = context()
-
-rules = [
-  rule("start", seq("a", opt("b1", "b2"), "c"), identity),
-  rule("start", bag(a="A", b="B", c="C"), identity)
-]
-
-c.compile(rules)
-
-print expr
-print
-
-#optimize()
-
-print
-print "rules:"
-for r in reversed(sorted(c.rules.values())):
-  for k in r:
-    print k

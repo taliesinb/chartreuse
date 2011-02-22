@@ -1,8 +1,7 @@
 #!/usr/bin/python
 
 from collections import defaultdict
-from sys import setrecursionlimit
-from parser_rule import rule, identity
+from rules import rule, identity
 
 class symbol(object):
   def __init__(self, type, value, span):
@@ -12,8 +11,20 @@ class symbol(object):
     
   def __repr__(self):
     return str(self.value)
-    return str(self.value) + " " + str(self.span[0]) + ":" + str(self.span[1])
+    return str(self.value) + " " + str(self.span[0]) + ":" + str(self.span[1])    
+    
+def flatten_values(x):
+  if type(x) == symbol:
+    x = x.value
+  if type(x) in [list, tuple]:
+    return ''.join(map(flatten_values, x))
+  else:
+    return str(x)
 
+def fake_tokenize(symbols, values):
+  n = len(values)
+  return map(lambda x,y,z: symbol(x, y, (z,z+1)), symbols, values, range(n))
+    
 def copy_fragment(frag):
   return fragment(frag.chart, frag.span, frag.pattern, frag.action, frag.matched, frag.type)
   
@@ -69,9 +80,9 @@ class chart(object):
     self.symbols = defaultdict(set)
     self.edges = defaultdict(set)
     self.rules = defaultdict(list)
-    rules["_empty_"] = rule("_empty_", [], None)
-    for rule in rules:
-      self.rules[rule.symbol].append(rule)
+    self.rules["_empty_"].append(rule("_empty_", []))
+    for r in rules:
+      self.rules[r.symbol].append(r)
     self.predict(0, "start")
     
   def parse(self, tokens):
@@ -79,7 +90,7 @@ class chart(object):
     for token in tokens:
       self.add_symbol(token)
     winners = [symbol 
-      for symbol in ch.symbols[(0, "start")] 
+      for symbol in self.symbols[(0, "start")] 
       if symbol.span[1] == rightmost]
     return winners
         
@@ -108,69 +119,21 @@ class chart(object):
       
   def print_edges(self):
     prefix = "\n    "
-    for pos, edge in sorted(ch.edges.items()):
+    for pos, edge in sorted(self.edges.items()):
       if edge: 
         print pos, prefix, (prefix + " ").join(map(str,edge))
         print
 
   def print_symbols(self):
-    for key, symbol in ch.symbols.items():
+    for key, symbol in self.symbols.items():
       print str(key).ljust(20)
       for sym in symbol:
         print  "\t\t", str(sym)
-  
-def join_all(x):
-  if type(x) == symbol:
-    x = x.value
-  if type(x) in [list, tuple]:
-    return ''.join(map(join_all, x))
-  else:
-    return str(x)
-  
-tokens = [
-  symbol("buffalo", "Buffalo-born", (0,1)),
-  symbol("buffalo", "Bison",        (1,2)),  
-  symbol("buffalo", "Buffalo-born", (2,3)),
-  symbol("buffalo", "Bison",        (3,4)),
-  symbol("buffalo", "bully",        (4,5)),
-  symbol("buffalo", "bully",        (5,6)),
-  symbol("buffalo", "Buffalo-born", (6,7)),
-  symbol("buffalo", "Bison",        (7,8))
-]
-    
-rules = [
-  rule("start", ["sentence"]),
-  rule("sentence", ["noun_phrase", "verb", "noun_phrase"], lambda n1, v, n2: join_all(["<", n1, "> performs the action ", v, " to <", n2, ">"])),
-  rule("noun_phrase", ["noun"]),
-  rule("noun_phrase", ["adjective", "noun"], lambda a, n: [n, " with property ", a]),
-  rule("noun_phrase", ["noun_phrase", "noun_phrase", "verb"], lambda n1, n2, v: ["<", n1, "> which is ", v, "'d by <", n2, ">"]),
-  rule("noun", ["buffalo"]),
-  rule("verb", ["buffalo"]),
-  rule("adjective", ["buffalo"])
-]
-
-ch = chart(tokens, rules)
-
-winners = ch.parse(tokens)
-
-if winners:
-  print "winners:"
-  i = 0
-  for w in sorted(winners):
-    print i, "\t", w
-    i += 1
-else:
-  print "no winners"
-  print
-  print "chart:"
-  ch.print_symbols()
-
-  print
-  print "edges:"
-  ch.print_edges()
-
-# artisan asylum: tuesday
-# sprout: thursday      
+        
+  def print_rules(self):
+    for r in reversed(sorted(self.rules.values())):
+      for k in r:
+        print k
     
 
   
