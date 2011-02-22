@@ -49,4 +49,56 @@ with the values of their corresponding matched symbols.
 
 ## Examples
 
-To come...
+A famous example of an ambiguous sentence in linguistics is the ("buffalo buffalo" sentence)[http://en.wikipedia.org/wiki/Buffalo_buffalo_Buffalo_buffalo_buffalo_buffalo_Buffalo_buffalo]. The high degree of ambiguity stems from the many meanings of the word "Buffalo", which can interpreted as an adjective ("born in the city of Buffalo"), a noun ("the animal also known as a bison"), and a verb ("to bully").
+
+Let's construct a fake sentence that has 8 consecutive "buffalos". All will have the same token, though we will tag them with values that indicate the interpretation we, as the speakers of the sentence, *intended*.
+
+    tokens = [
+      symbol("buffalo", "Buffalo-born", (0,1)),
+      symbol("buffalo", "Bison",        (1,2)),  
+      symbol("buffalo", "Buffalo-born", (2,3)),
+      symbol("buffalo", "Bison",        (3,4)),
+      symbol("buffalo", "bully",        (4,5)),
+      symbol("buffalo", "bully",        (5,6)),
+      symbol("buffalo", "Buffalo-born", (6,7)),
+      symbol("buffalo", "Bison",        (7,8))
+    ]    
+
+We use the following grammar rules to define nouns, noun phrases, adjectives, and sentences:
+
+    rules = [
+      rule("start", ["sentence"]),
+      rule("sentence", ["noun_phrase", "verb", "noun_phrase"], lambda n1, v, n2: flatten_values(["<", n1, "> performs the action ", v, " to <", n2, ">"])),
+      rule("noun_phrase", ["noun"]),
+      rule("noun_phrase", ["adjective", "noun"], lambda a, n: [n, " with property ", a]),
+      rule("noun_phrase", ["noun_phrase", "noun_phrase", "verb"], lambda n1, n2, v: ["<", n1, "> which is ", v, "'d by <", n2, ">"]),
+      rule("noun", ["buffalo"]),
+      rule("verb", ["buffalo"]),
+      rule("adjective", ["buffalo"])
+    ]
+
+Many valid interpretations of the sentence are possible, but number 15 is the one that actually matches the canonical one:
+
+    winners:
+    0 	<Buffalo-born> performs the action Bison to <<Bison with property Buffalo-born> which is Bison'd by <<bully> which is Buffalo-born'd by <bully>>>
+    1 	<Buffalo-born> performs the action Bison to <<Buffalo-born> which is Bison'd by <<bully with property Bison> which is Buffalo-born'd by <bully>>>
+    2 	<<Buffalo-born> which is Buffalo-born'd by <Bison>> performs the action Bison to <<bully> which is Bison'd by <Buffalo-born with property bully>>
+    3 	<<Buffalo-born> which is Bison'd by <Buffalo-born with property Bison>> performs the action bully to <<bully> which is Bison'd by <Buffalo-born>>
+    4 	<<Bison with property Buffalo-born> which is Bison'd by <Buffalo-born>> performs the action bully to <<bully> which is Bison'd by <Buffalo-born>>
+    5 	<Buffalo-born> performs the action Bison to <<Buffalo-born> which is Bison'd by <<Bison> which is Buffalo-born'd by <bully with property bully>>>
+    6 	<Buffalo-born> performs the action Bison to <<<Bison with property Buffalo-born> which is bully'd by <bully>> which is Bison'd by <Buffalo-born>>
+    7 	<Bison with property Buffalo-born> performs the action Buffalo-born to <<Bison> which is Bison'd by <<bully> which is Buffalo-born'd by <bully>>>
+    8 	<Buffalo-born> performs the action Bison to <<<Buffalo-born> which is bully'd by <bully with property Bison>> which is Bison'd by <Buffalo-born>>
+    9 	<Bison with property Buffalo-born> performs the action Buffalo-born to <<<Bison> which is bully'd by <bully>> which is Bison'd by <Buffalo-born>>
+    10 	<Buffalo-born> performs the action Bison to <<<Buffalo-born> which is bully'd by <Bison>> which is Bison'd by <Buffalo-born with property bully>>
+    11 	<Bison with property Buffalo-born> performs the action Buffalo-born to <<bully with property Bison> which is Bison'd by <Buffalo-born with property bully>>
+    12 	<<Buffalo-born> which is Buffalo-born'd by <Bison>> performs the action Bison to <<bully with property bully> which is Bison'd by <Buffalo-born>>
+    13 	<<<Buffalo-born> which is Buffalo-born'd by <Bison>> which is bully'd by <Bison>> performs the action bully to <Bison with property Buffalo-born>
+    14 	<<Bison with property Buffalo-born> which is bully'd by <Bison with property Buffalo-born>> performs the action bully to <Bison with property Buffalo-born>
+    15 	<<Buffalo-born> which is bully'd by <<Bison> which is Bison'd by <Buffalo-born>>> performs the action bully to <Bison with property Buffalo-born>
+    16 	<<Buffalo-born> which is bully'd by <<Bison> which is bully'd by <Bison with property Buffalo-born>>> performs the action Buffalo-born to <Bison>
+    17 	<<Bison with property Buffalo-born> which is bully'd by <<Buffalo-born> which is bully'd by <Bison>>> performs the action Buffalo-born to <Bison>
+    18 	<<<Bison with property Buffalo-born> which is Bison'd by <Buffalo-born>> which is bully'd by <bully>> performs the action Buffalo-born to <Bison>
+    19 	<<<Buffalo-born> which is Bison'd by <Buffalo-born with property Bison>> which is bully'd by <bully>> performs the action Buffalo-born to <Bison>
+    20 	<<Buffalo-born> which is bully'd by <<Buffalo-born with property Bison> which is bully'd by <Bison>>> performs the action Buffalo-born to <Bison>
+    21 	<<<Buffalo-born> which is Buffalo-born'd by <Bison>> which is bully'd by <bully with property Bison>> performs the action Buffalo-born to <Bison>
