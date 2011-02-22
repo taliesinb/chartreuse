@@ -63,7 +63,9 @@ class opt:
     
 class bag:
   def __init__(self, **args):
-    self.terms = tosyms(args)
+    self.terms = {}
+    for k, v in args.items():
+      self.terms[k] = tosym(v)
     
   def compile(self, name):
     name += "B"
@@ -86,7 +88,7 @@ class bag:
             sub_rules.add((unit_names[k], sub_name))
         rules[super_name] = map(list, list(sub_rules))
         
-    rhs = [term.compile(name) for symbol in terms.keys()]
+    rhs = [term.compile(name) for term in self.terms.values()]
     
     for unit_name, term in zip(unit_names, rhs):
       rules[unit_name].append(term)
@@ -139,12 +141,13 @@ def define(name, expr):
 
 # test a fixed list containing various other types of clauses
 expr = seq("a", "b", seq("c", "d"), opt("e"), "g", "h")
+expr = bag(a="aye", b="bee", c="see")
 define("start", expr)
 
 print expr
 print
 
-optimize()
+#optimize()
 
 print
 print "rules:"
