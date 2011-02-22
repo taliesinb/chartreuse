@@ -46,7 +46,11 @@ class fragment(object):
       self.chart.add_edge(self)
       self.chart.predict(self.next_pos(), self.next_type())
     else:
-      self.chart.add_symbol(symbol(self.type, self.action(*self.matched), self.span))
+      if callable(self.action):
+        value = self.action(*self.matched)
+      else:
+        value = self.action
+      self.chart.add_symbol(symbol(self.type, value, self.span))
       #print "finished", self.type, "by matching", [m.type for m in self.matched]
   
   def __repr__(self):
@@ -65,6 +69,7 @@ class chart(object):
     self.symbols = defaultdict(set)
     self.edges = defaultdict(set)
     self.rules = defaultdict(list)
+    rules["_empty_"] = rule("_empty_", [], None)
     for rule in rules:
       self.rules[rule.symbol].append(rule)
     self.predict(0, "start")

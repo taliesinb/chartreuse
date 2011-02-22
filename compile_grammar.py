@@ -2,9 +2,7 @@
 from collections import defaultdict
 from itertools import combinations, groupby
 from parser_rule import rule
-
-rules = defaultdict(list)
-names = defaultdict(int)
+from utils import flatten, identity, stringify, first
 
 def tosym(x):
   if type(x) == str:
@@ -14,65 +12,115 @@ def tosym(x):
     
 def tosyms(exps):
   return map(tosym, exps)
-    
-def tostr(arg):
-  if type(arg) in [list, tuple]:
-    return ''.join(map(tostr, arg))
-  else:
-    return str(arg)
-
-def next_name(name):
-  names[name] += 1
-  return join_name(name, names[name])
-  
+      
 def join_name(*names):
-  return  ''.join(map(tostr, names))
+  return  ''.join(map(stringify, names))
 
-class rule:
+class context(object):
+  def __init__(self):
+    self.rules = defaultdict(list)
+    self.names = defaultdict(int)
+
+  def compile(self, rules):
+    for r in rules:
+      r.pattern.set_context(self)
+      name = r.pattern.compile(r.symbol)
+      if name != r.symbol:
+        self.rules[r.symbol].append(rule(r.symbol, [name], identity))
+      
+  def optimize(self):
+    rewrite = {}
+    items = list(sorted(self.rules.items()))
+    length = len(items)
+    for sym1, list1 in range(length-1):
+      name1 = items[i][0]
+      for j in range(i+1, length):
+        name2 = items[j][0]
+        if items[i] == items[j]:
+          rewrite[name2] = name1
+          rename_symbol(rewrite)
   
+    for sym, rulelist in items:
+      if len(rulelist) == 1:
+        only = rulelist[0]
+        if type(only) == str:
+          rewrite[sym] = only
+          rename_symbol(rewrite)
+        elif type(only) == list and len(only) == 1 and type(only[0]) == str:
+          rewrite[sym] = only[0]
+          rename_symbol(rewrite)
+          
+    if len(rewrite):
+      print "optimization:"
+      for a,b in rewrite.items():
+        print "\t", a.ljust(20), "->", b
+
+  def rename_symbol(self, reps):
+    for symbol, rulelist in rules:
+      for i in range(len(rulelist)):
+        rules[symbol][i].rewrite(reps)
   
-class symbol:
+class pattern(object):
+  def __init__(self, *terms):
+    self.terms = tosyms(terms)
+    
+  def __iter__(self):
+    return iter(self.terms)
+    
+  def set_context(self, context):
+    self.context = context
+    for i in self:
+      i.set_context(context)
+
+  def next_name(self, name):
+    self.context.names[name] += 1
+    return join_name(name, self.context.names[name])
+    
+  def append(self, rule):
+    self.context.rules[rule.symbol].append(rule)
+
+class symbol(pattern):
   def __init__(self, name):
     self.name = name
+    
+  def __iter__(self):
+    return iter([])
     
   def compile(self, name):
     return self.name
 
-class seq:
-  def __init__(self, *args):
-    self.terms = tosyms(args)
-    
+class seq(pattern):    
   def compile(self, name):
-    name += "S"
-    rules[name] = [[term.compile(next_name(name)) for term in self.terms]]
+    name += "."
+    self.append(rule(name, [term.compile(self.next_name(name)) for term in self], flatten))
     return name
 
-class alt:
-  def __init__(self, *opts):
-    self.terms = tosyms(opts)
-        
+class alt(pattern):        
   def compile(self, name):
-    name += "A"
-    rules[name] = [term.compile(next_name(name)) for term in self.terms]
+    name += "|"
+    for term in self:
+      self.append(rule(name, [term.compile(self.next_name(name))], first))
     return name
   
-class opt:
-  def __init__(self, term):
-    self.term = tosym(term)
-
+class opt(pattern):
   def compile(self, name):
     name += "?"
-    rules[name] = ["_empty_", self.term.compile(name)]
+    self.append(rule(name, "_empty_", first))
+    for term in self:
+      self.append(rule(name, [term.compile(name)], first))
     return name
     
-class bag:
+class bag(pattern):
   def __init__(self, **args):
     self.terms = {}
     for k, v in args.items():
       self.terms[k] = tosym(v)
+      
+  def __iter__(self):
+    return iter(self.terms.values())
     
   def compile(self, name):
-    name += "B"
+    name += ":"
     length = len(self.terms)
     valid_super_names = []
     unit_names = [join_name(name, k) for k in range(length)]
@@ -90,47 +138,31 @@ class bag:
             sub_name = join_name(name, sub_perm)
             sub_rules.add((sub_name, unit_names[k]))
             sub_rules.add((unit_names[k], sub_name))
-        rules[super_name] = map(list, list(sub_rules))
+        for k in sub_rules:
+          self.append(rule(super_name, k, identity))
         
     rhs = [term.compile(name) for term in self.terms.values()]
     
     for unit_name, term in zip(unit_names, rhs):
-      rules[unit_name].append(term)
+      self.append(rule(unit_name, term, first)) 
       
     valid_super_names.append(join_name(name, "0"))
-    rules[name] = [rule(name, None) for rule in valid_super_names]
+    for super_name in valid_super_names:
+      self.append(rule(name, super_name, identity))
     return name
-            
-# remove redundant rules
-def optimize():
-  rewrite = {}
-  items = list(sorted(rules.items()))
-  length = len(items)
-  for i in range(length-1):
-    name1 = items[i][0]
-    for j in range(i+1, length):
-      name2 = items[j][0]
-      if items[i][1] == items[j][1]:
-        rewrite[name2] = name1
-        rewrite_rules(rewrite)
-
-  for sym, pattern in rules.items():
-    if type(pattern) == list and len(pattern) == 1 and type(pattern[0]) == str:
-        rewrite[sym] = pattern[0]
-        rewrite_rules(rewrite)
-        
-  if len(rewrite):
-    print "optimization:"
-    for a,b in rewrite.items():
-      print "\t", a.ljust(20), "->", b
-
-def define(name, expr, action):
-  rules[name].append(rule(name, expr.compile(name), action))
 
 # test a fixed list containing various other types of clauses
 expr = seq("a", "b", seq("c", "d"), opt("e"), "g", "h")
 expr = bag(a="aye", b="bee", c="see")
-define("start", expr, None)
+
+c = context()
+
+rules = [
+  rule("start", seq("a", opt("b1", "b2"), "c"), identity),
+  rule("start", bag(a="A", b="B", c="C"), identity)
+]
+
+c.compile(rules)
 
 print expr
 print
@@ -139,5 +171,6 @@ print
 
 print
 print "rules:"
-for n, r in sorted(rules.items()):
-  print "\t", n.ljust(20), r
+for r in reversed(sorted(c.rules.values())):
+  for k in r:
+    print k
