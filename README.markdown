@@ -49,9 +49,9 @@ with the values of their corresponding matched symbols.
 
 ## Examples
 
-A famous example of an ambiguous sentence in linguistics is the ("buffalo buffalo" sentence)[http://en.wikipedia.org/wiki/Buffalo_buffalo_Buffalo_buffalo_buffalo_buffalo_Buffalo_buffalo]. The high degree of ambiguity stems from the many meanings of the word "Buffalo", which can interpreted as an adjective ("born in the city of Buffalo"), a noun ("the animal also known as a bison"), and a verb ("to bully").
+A famous example of an ambiguous sentence in linguistics is the ["buffalo buffalo" sentence](http://en.wikipedia.org/wiki/Buffalo_buffalo_Buffalo_buffalo_buffalo_buffalo_Buffalo_buffalo). The high degree of ambiguity stems from the many meanings of the word "Buffalo", which can interpreted as an adjective ("born in the city of Buffalo"), a noun ("the animal also known as a bison"), and a verb ("to bully").
 
-Let's construct a fake sentence that has 8 consecutive "buffalos". All will have the same token, though we will tag them with values that indicate the interpretation we, as the speakers of the sentence, *intended*.
+Let's construct a fake sentence that has 8 consecutive "buffalo"s. All will have the same token, though we will tag them with values that indicate the interpretation we, as the speakers of the sentence, *intended*.
 
     tokens = [
       symbol("buffalo", "Buffalo-born", (0,1)),
@@ -65,7 +65,7 @@ Let's construct a fake sentence that has 8 consecutive "buffalos". All will have
     ]    
 
 We use the following grammar rules to define nouns, noun phrases, adjectives, and sentences. Each grammar rule has an associated "action" that determines how to construct a meaning from its constituent parts. This
-idea is quite a common one in computational linguistics but has as its basis the theory of (generative semantics)[http://en.wikipedia.org/wiki/Generative_semantics].
+idea is quite a common one in computational linguistics but has as its basis the theory of [generative semantics](http://en.wikipedia.org/wiki/Generative_semantics).
 
     rules = [
       rule("start", ["sentence"]),
@@ -77,6 +77,11 @@ idea is quite a common one in computational linguistics but has as its basis the
       rule("verb", ["buffalo"]),
       rule("adjective", ["buffalo"])
     ]
+
+We now feed these rules into chartreuse and have it parse our ambigious sentence:
+
+    ch = chart(tokens, rules)
+    winners = ch.parse(tokens)
 
 Many valid interpretations of the sentence are possible, but number 15 is the one that actually matches the canonical one:
 
