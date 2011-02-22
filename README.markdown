@@ -64,7 +64,8 @@ Let's construct a fake sentence that has 8 consecutive "buffalos". All will have
       symbol("buffalo", "Bison",        (7,8))
     ]    
 
-We use the following grammar rules to define nouns, noun phrases, adjectives, and sentences:
+We use the following grammar rules to define nouns, noun phrases, adjectives, and sentences. Each grammar rule has an associated "action" that determines how to construct a meaning from its constituent parts. This
+idea is quite a common one in computational linguistics but has as its basis the theory of (generative semantics)[http://en.wikipedia.org/wiki/Generative_semantics].
 
     rules = [
       rule("start", ["sentence"]),
