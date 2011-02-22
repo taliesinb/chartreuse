@@ -1,27 +1,20 @@
 #!/usr/bin/python
-
 from collections import defaultdict
 from itertools import combinations
-
-"""
-what can productions look like?
-["a", "b", "c"] means fixed order
-{"l":"a", "r":"b", "m":"c"} means an any-order bag, keys and values are stored in dictionary
-{"!l": "a"] means that term l has to appear
-["a", ("b","c"), "c"] means alternatives
-["a", "?b", "c"] means that 'b' is optional
-"""
 
 rules = defaultdict(list)
 names = defaultdict(int)
 
+# create a new unique name based on original name
 def new_name(name):
   names[name] += 1  
   return name + "_" + str(names[name])
 
+# is this term an optional term (= a singleton tuple)
 def optionalQ(term):
   return type(term) == tuple and len(term) == 1
   
+# handle a term that is a list of consecutive clauses
 def dolist(terms, name):
   rules[name].append(dolist_recurse(terms, name))
   return name
@@ -37,26 +30,18 @@ def dolist_recurse(terms, name):
     return [term_name]
   else:
     return [doterm(terms[0], term_name)] + dolist_recurse(terms[1:], name)
-      
+
+# handle a term that is a list of alternative clauses      
 def doalt(terms, name):
   for term in terms:
     rules[name].append(term)
   return name
   
-# {1: "a", 2:"b", 3:"c"}
-# make grammar symbol for each pair
-# sym12 -> [1,2], [2,1] sym13 -> [1,3],[3,1] sym23 -> [2,3],[3,2]
-# sym123 -> [sym[12], 3], [3, sym[12]]
-
-def flatten(lists):
-  if type(lists) in [list, tuple]:
-    return reduce((lambda x,y: x + y), (flatten(f) for f in lists))
-  else:
-    return [lists]
-
+# make a string out of a list of ints
 def intstr(ints):
   return ''.join(map(str, sorted(ints)))
 
+# handle a term that is a bag-of-clauses, returning its name
 def dobag(terms, name):
   items = terms.items()
   length = len(terms)
@@ -87,6 +72,7 @@ def dobag(terms, name):
   rules[name] = subsets
   return name
         
+# dispatch on a term according to its type
 def doterm(term, name):
   t = type(term)
   if t == list:
@@ -94,25 +80,18 @@ def doterm(term, name):
   if t == tuple:
     return doalt(term, name + "_alts")
   if t == dict:
-    return dobag(term, name)
+    return dobag(term, name + "_bag")
   if t == str:
     return term
-  
-# x -> a ?b c
-# x -> a b c
-# x -> a c
-# x -> x_1
-# x_1 -> a x_2
-# x_2 -> b c
-# x_2 -> c
-# [a] [?b c]
-       
+         
+# recursively replace all instances in a list-tree according to dictionary "reps"
 def replace_in_list(x, reps):
   if type(x) == list:
     return [replace_in_list(e,reps) for e in x]
   else:
     return reps.get(x,x)
 
+# rewrite rules according to a dictionary, replace every instance of symbol key with symbol value
 def rewrite_rules(dict):
   for key in rules:
     if key not in dict:
@@ -121,7 +100,7 @@ def rewrite_rules(dict):
     if key in rules:
       del rules[key]
     
-
+# remove redundant rules
 def optimize():
   rewrite = {}
   items = list(sorted(rules.items()))
@@ -143,12 +122,13 @@ def optimize():
     print "optimization:"
     for a,b in rewrite.items():
       print "\t", a.ljust(20), "->", b
-       
-dobag({1:"a",2:"b",3:"c"}, "start")
-#dolist(["a","b","c",,"d","e","f"], "start")
+
+# test a fixed list containing various other types of clauses
+dolist(["a", {"j1":"foo", "j2":"bar", "j3":"baz"}, ["c","d"], ("e","f"), ("g",), "h","i"], "start")
 
 optimize()
+
 print
 print "rules:"
-for n, r in rules.items():
+for n, r in sorted(rules.items()):
   print "\t", n.ljust(20), r
