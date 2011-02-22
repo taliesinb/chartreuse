@@ -1,6 +1,7 @@
 #!/usr/bin/python
 from collections import defaultdict
 from itertools import combinations, groupby
+from parser_rule import rule
 
 rules = defaultdict(list)
 names = defaultdict(int)
@@ -26,6 +27,9 @@ def next_name(name):
   
 def join_name(*names):
   return  ''.join(map(tostr, names))
+
+class rule:
+  
   
 class symbol:
   def __init__(self, name):
@@ -94,25 +98,9 @@ class bag:
       rules[unit_name].append(term)
       
     valid_super_names.append(join_name(name, "0"))
-    rules[name] = valid_super_names
+    rules[name] = [rule(name, None) for rule in valid_super_names]
     return name
-        
-# recursively replace all instances in a list-tree according to dictionary "reps"
-def replace_in_list(x, reps):
-  if type(x) == list:
-    return [replace_in_list(e,reps) for e in x]
-  else:
-    return reps.get(x,x)
-
-# rewrite rules according to a dictionary, replace every instance of symbol key with symbol value
-def rewrite_rules(dict):
-  for key in rules:
-    if key not in dict:
-      rules[key] = replace_in_list(rules[key], dict)
-  for key in dict:
-    if key in rules:
-      del rules[key]
-    
+            
 # remove redundant rules
 def optimize():
   rewrite = {}
@@ -136,13 +124,13 @@ def optimize():
     for a,b in rewrite.items():
       print "\t", a.ljust(20), "->", b
 
-def define(name, expr):
-  rules[name].append(expr.compile(name))
+def define(name, expr, action):
+  rules[name].append(rule(name, expr.compile(name), action))
 
 # test a fixed list containing various other types of clauses
 expr = seq("a", "b", seq("c", "d"), opt("e"), "g", "h")
 expr = bag(a="aye", b="bee", c="see")
-define("start", expr)
+define("start", expr, None)
 
 print expr
 print

@@ -1,10 +1,10 @@
 #!/usr/bin/python
+
 from collections import defaultdict
 from sys import setrecursionlimit
+from parser_rule import rule
 
-setrecursionlimit(64)
-
-class symbol:
+class symbol(object):
   def __init__(self, type, value, span):
     self.type = type
     self.value = value
@@ -12,6 +12,7 @@ class symbol:
     
   def __repr__(self):
     return str(self.value)
+    return str(self.value) + " " + str(self.span[0]) + ":" + str(self.span[1])
 
 def copy_fragment(frag):
   return fragment(frag.chart, frag.span, frag.pattern, frag.action, frag.matched, frag.type)
@@ -19,7 +20,7 @@ def copy_fragment(frag):
 def new_fragment(chart, pos, type, pattern, action):
   return fragment(chart, [pos,pos], pattern, action, [], type)
 
-class fragment:    
+class fragment(object):    
   def __init__(self, chart, span, pattern, action, matched, type):
     self.chart = chart
     self.span = span[:]
@@ -49,7 +50,7 @@ class fragment:
       #print "finished", self.type, "by matching", [m.type for m in self.matched]
   
   def __repr__(self):
-    return self.type + ":\t" + (' '.join(map(lambda x: str(x.type), self.matched)) + ' | ' + ' '.join(map(str,self.pattern))).strip() + '\t\t' + ','.join(map(lambda x: str(x.value),self.matched))
+    return self.type.ljust(15) + "->" + (' '.join(map(lambda x: str(x.type), self.matched)) + ' | ' + ' '.join(map(str,self.pattern))).strip() + '\t\t' + ','.join(map(lambda x: str(x.value),self.matched))
     return "<" + ','.join(map(str, [self.type, self.span, self.matched])) + '>'
     
   def __hash__(self):
@@ -59,7 +60,7 @@ class fragment:
     return self.type == other.type and self.span == other.span and self.matched == other.matched
               
 # edge 
-class chart:
+class chart(object):
   def __init__(self, tokens, rules):
     self.symbols = defaultdict(set)
     self.edges = defaultdict(set)
@@ -101,37 +102,68 @@ class chart:
       copy_fragment(frag).grow(symbol) 
       
   def print_edges(self):
+    prefix = "\n    "
     for pos, edge in sorted(ch.edges.items()):
       if edge: 
-        print pos, "\n\t", '\n\t'.join(map(str,edge))
+        print pos, prefix, (prefix + " ").join(map(str,edge))
+        print
 
   def print_symbols(self):
     for key, symbol in ch.symbols.items():
-      print key, "\t->\t", symbol
+      print str(key).ljust(20)
+      for sym in symbol:
+        print  "\t\t", str(sym)
+    
+def identity(*x):
+  if len(x) == 1:
+    return x[0]
+  else:
+    return x
     
     
 tokens = [
-  symbol("a", "A1", (0,1)),
-  symbol("a", "A2", (1,2)),  
-  symbol("a", "A3", (2,3)),
-  symbol("b", "B1", (3,4)),
-  symbol("b", "B2", (4,5))
+  symbol("buffalo", "Buffalo-born", (0,1)),
+  symbol("buffalo", "Bison",      (1,2)),  
+  symbol("buffalo", "Buffalo-born", (2,3)),
+  symbol("buffalo", "Bison",      (3,4)),
+  symbol("buffalo", "bully",      (4,5)),
+  symbol("buffalo", "bully",      (5,6)),
+  symbol("buffalo", "Buffalo-born", (6,7)),
+  symbol("buffalo", "Bison",      (7,8))
 ]
   
+def join_all(x):
+  if type(x) == symbol:
+    x = x.value
+  if type(x) in [list, tuple]:
+    return ''.join(map(join_all, x))
+  else:
+    return str(x)
+  
 rules = {}
-rules["start"] = [(["A", "B"], lambda x, y: (x,y))]
-rules["A"] = [(["A", "A"], lambda x, y: (x,y)), (["a"], lambda x: "a")]
-rules["B"] = [(["a", "b", "b"], lambda x, y, z: (x,y,z)), (["b"], lambda x: "b")]
+rules["start"] = [(["sentence"], identity)]
+rules["sentence"] = [(["nounphrase", "verb", "nounphrase"], lambda n1, v, n2: join_all(["<", n1, "> performs the action ", v, " to <", n2, ">"]))]
+rules["nounphrase"] = [
+  (["noun"], identity), 
+  (["adjective", "noun"], lambda a, n: [n, " with property ", a]), 
+  (["nounphrase", "nounphrase", "verb"], lambda n1, n2, v: ["<", n1, "> which is ", v, "'d by <", n2, ">"])
+]
+rules["noun"] = [(["buffalo"], identity)]
+rules["verb"] = [(["buffalo"], identity)]
+rules["adjective"] = [(["buffalo"], identity)]
 
 ch = chart(tokens, rules)
 
 winners = ch.parse(tokens)
 
-print "winners:"
-for w in winners:
-  print "\t", winners
-
-if winners:  
+if winners:
+  print "winners:"
+  i = 0
+  for w in sorted(winners):
+    print i, "\t", w
+    i += 1
+else:
+  print "no winners"
   print
   print "chart:"
   ch.print_symbols()
