@@ -2,7 +2,7 @@
 
 from collections import defaultdict
 from sys import setrecursionlimit
-from parser_rule import rule
+from parser_rule import rule, identity
 
 class symbol(object):
   def __init__(self, type, value, span):
@@ -17,8 +17,8 @@ class symbol(object):
 def copy_fragment(frag):
   return fragment(frag.chart, frag.span, frag.pattern, frag.action, frag.matched, frag.type)
   
-def new_fragment(chart, pos, type, pattern, action):
-  return fragment(chart, [pos,pos], pattern, action, [], type)
+def new_fragment(chart, pos, rule):
+  return fragment(chart, [pos,pos], rule.pattern, rule.action, [], rule.symbol)
 
 class fragment(object):    
   def __init__(self, chart, span, pattern, action, matched, type):
@@ -64,7 +64,9 @@ class chart(object):
   def __init__(self, tokens, rules):
     self.symbols = defaultdict(set)
     self.edges = defaultdict(set)
-    self.rules = rules
+    self.rules = defaultdict(list)
+    for rule in rules:
+      self.rules[rule.symbol].append(rule)
     self.predict(0, "start")
     
   def parse(self, tokens):
@@ -77,7 +79,6 @@ class chart(object):
     return winners
         
   def add_edge(self, frag):
-    #print "adding edge for:", frag.type, "at", frag.next_pos(), "on", frag.next_type()
     type = frag.next_type()
     pos = frag.next_pos()
     self.edges[(pos,type)].add(frag)
@@ -85,13 +86,12 @@ class chart(object):
       copy_fragment(frag).grow(symbol)
     
   def predict(self, pos, type):
-    for pattern, action in rules.get(type,{}):
-      #print "predicting fragment", "'" + type + "'", "at", pos, "via pattern", pattern
-      first_symbol = pattern[0]
-      predict = (pos, first_symbol) not in self.edges
-      self.add_edge(new_fragment(self, pos, type, pattern, action))
+    for rule in self.rules.get(type,{}):
+      first = rule.first_symbol()
+      predict = (pos, first) not in self.edges
+      self.add_edge(new_fragment(self, pos, rule))
       if predict:        
-        self.predict(pos, first_symbol)
+        self.predict(pos, first)
   
   def add_symbol(self, symbol):
     #print "adding symbol", symbol.type, "at", symbol.span
@@ -113,24 +113,6 @@ class chart(object):
       print str(key).ljust(20)
       for sym in symbol:
         print  "\t\t", str(sym)
-    
-def identity(*x):
-  if len(x) == 1:
-    return x[0]
-  else:
-    return x
-    
-    
-tokens = [
-  symbol("buffalo", "Buffalo-born", (0,1)),
-  symbol("buffalo", "Bison",      (1,2)),  
-  symbol("buffalo", "Buffalo-born", (2,3)),
-  symbol("buffalo", "Bison",      (3,4)),
-  symbol("buffalo", "bully",      (4,5)),
-  symbol("buffalo", "bully",      (5,6)),
-  symbol("buffalo", "Buffalo-born", (6,7)),
-  symbol("buffalo", "Bison",      (7,8))
-]
   
 def join_all(x):
   if type(x) == symbol:
@@ -140,17 +122,27 @@ def join_all(x):
   else:
     return str(x)
   
-rules = {}
-rules["start"] = [(["sentence"], identity)]
-rules["sentence"] = [(["nounphrase", "verb", "nounphrase"], lambda n1, v, n2: join_all(["<", n1, "> performs the action ", v, " to <", n2, ">"]))]
-rules["nounphrase"] = [
-  (["noun"], identity), 
-  (["adjective", "noun"], lambda a, n: [n, " with property ", a]), 
-  (["nounphrase", "nounphrase", "verb"], lambda n1, n2, v: ["<", n1, "> which is ", v, "'d by <", n2, ">"])
+tokens = [
+  symbol("buffalo", "Buffalo-born", (0,1)),
+  symbol("buffalo", "Bison",        (1,2)),  
+  symbol("buffalo", "Buffalo-born", (2,3)),
+  symbol("buffalo", "Bison",        (3,4)),
+  symbol("buffalo", "bully",        (4,5)),
+  symbol("buffalo", "bully",        (5,6)),
+  symbol("buffalo", "Buffalo-born", (6,7)),
+  symbol("buffalo", "Bison",        (7,8))
 ]
-rules["noun"] = [(["buffalo"], identity)]
-rules["verb"] = [(["buffalo"], identity)]
-rules["adjective"] = [(["buffalo"], identity)]
+    
+rules = [
+  rule("start", ["sentence"]),
+  rule("sentence", ["noun_phrase", "verb", "noun_phrase"], lambda n1, v, n2: join_all(["<", n1, "> performs the action ", v, " to <", n2, ">"])),
+  rule("noun_phrase", ["noun"]),
+  rule("noun_phrase", ["adjective", "noun"], lambda a, n: [n, " with property ", a]),
+  rule("noun_phrase", ["noun_phrase", "noun_phrase", "verb"], lambda n1, n2, v: ["<", n1, "> which is ", v, "'d by <", n2, ">"]),
+  rule("noun", ["buffalo"]),
+  rule("verb", ["buffalo"]),
+  rule("adjective", ["buffalo"])
+]
 
 ch = chart(tokens, rules)
 
