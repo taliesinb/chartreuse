@@ -19,29 +19,29 @@ All grammar rules are of either of the following forms:
 
 A seperate module can compile more complicated grammar rules down into this simple form. The more complicated syntax includes the following constructs:
 
-    [expr0, expr1, ...]
-    (expr0, expr1, ...)
-    (expr, )
-    {"name0" : expr0, "name1" : expr1, ...}
+    [expr0, expr1, ...] or seq(expr0, expr1, ...)
+    alt(expr0, expr1, ...)
+    opt(expr)
+    bag(name=expr0, name1=expr1, ...)
 
 The constructs can be composed, so that a list may contain tuples and vice versa. The terminal objects of this syntax are always single
 strings that refer to existing grammar symbols.
 
 ### List
 
-A lists such as `[expr0, expr1, ...]` corresponds to a series of expressions in a fixed order that must be matched left-to-right.
+A list such as `[expr0, expr1, ...]` or an instnace of class seq `seq(expr0, expr1, ...)` corresponds to a series of expressions in a fixed order that must be matched left-to-right.
 
 ### Tuple
 
-A tuple such as `(expr0, expr1, ...)` corresponds to a series of alternative expressions, exactly one of which has to match.
+The instance of class alt `alt(alexpr0, expr1, ...)` corresponds to a series of alternative expressions, exactly one of which has to match.
 
 ### Singleton tuple
 
-The special tuple `(expr,)` (which indicates a single-item tuple in Python) refers to an optional expression that may or may not match.
+The instance of class opt `opt(expr)` refers to an optional expression that may or may not match. Multiple terms can also be used, indicating a series of alternatives, one or zero of which must match.
 
 ### Dictionary
 
-A dictionary such as `{"name0": expr0, "name1": expr1}` corresponds to a "bag" of clauses. 
+The instance of class bag `bag(name=expr0, name1=expr1, ...)` corresponds to a "bag" of clauses. 
 
 Only one clause is required to match, which is taken to be the first clause, but subsequent clauses can also match, in any order and combination. 
 The value of the resulting symbol is once again a dictionary with the same keys, but with the expressions replaced 
@@ -83,7 +83,7 @@ We now feed these rules into chartreuse and have it parse our ambigious sentence
     ch = chart(tokens, rules)
     winners = ch.parse(tokens)
 
-Many valid interpretations of the sentence are possible, but number 15 is the one that actually matches the canonical one:
+Many valid interpretations of the sentence are possible, but number 14 is the one that actually matches the canonical one:
 
     winners:
     0 	<Buffalo-born> performs the action Bison to <<Bison with property Buffalo-born> which is Bison'd by <<bully> which is Buffalo-born'd by <bully>>>
