@@ -24,8 +24,8 @@ A seperate module can compile more complicated grammar rules down into this simp
     opt(expr)
     bag(name=expr0, name1=expr1, ...)
 
-The constructs can be composed, so that a list may contain tuples and vice versa. The terminal objects of this syntax are always single
-strings that refer to existing grammar symbols.
+The constructs can be composed, so that a seq may contain bags, etc. Intermediate symbols will be produced by the compiler to represent various "fragments" of a compound grammar rule. 
+The terminal objects of this syntax are always single strings that refer to existing grammar symbols.
 
 ### List
 
