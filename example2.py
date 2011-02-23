@@ -6,21 +6,44 @@ from rules import *
 from patterns import *
 from utils import *
 
-tokens = fake_tokenize(
-  ["medium", "medium_verb", "prep", "entity"], 
-  ["emails", "that I've sent", "to", "johhnie"]
-)
+def integer(n):
+  return symbol("integer", n, (0,0))
+
+def in_sequence(tokens):
+  for i in range(len(tokens)):
+    t = tokens[i]
+    if type(t) == str:
+      tokens[i] = symbol(t, t, (i,i+1))
+  return tokens
   
 rules = [
   rule("start", ["sentence"]),
-  rule("sentence", ["medium", "medium_verb", "prep", "entity"]),
+  rule("medium_query", bag(
+    medium="medium", 
+    entity_clause=["medium_verb", opt("prep"), "entity"], 
+    time_clause=alt("from", "during", "at", "when"),
+    about_clause=["about", "topic"])),
+    
+  rule("sentence", ["medium_query"]),
   rules("time_unit", ["weeks", "days", "hours"]),  
   rule("time_point", ["integer", "time_unit", "ago"]),
   rules("time_span", [["before", "time_point"], ["between", "time_point", "and", "timepoint"], ["around", "time_point"]]),
-  rule("medium", ["email", "text", "im"])
+  
+  # tokens:
+  rule("medium", ["email", "text", "im"]),
+  rule("entity", ["alice", "bob"]),
+  rule("medium_verb", ["between", "to", "from"]),
+  rule("topic", ["concert", "rent", "movie"])
 ]
 
-ch = chart(tokens, flatten(rules))
+tokens = in_sequence(["emails", "to", "bob", "about", "movie"])
+
+con = context()
+con.compile(flatten(rules))
+
+compiled_rules = con.get_rules()
+
+ch = chart(tokens, compiled_rules)
 
 winners = ch.parse(tokens)
 
@@ -37,20 +60,3 @@ i = 0
 for w in sorted(winners):
   print i, "\t", w
   i += 1
-  
-'''
-# test a fixed list containing various other types of clauses
-expr = seq("a", "b", seq("c", "d"), opt("e"), "g", "h")
-expr = bag(a="aye", b="bee", c="see")
-
-c = context()
-
-rules = [
-  rule("start", seq("a", opt("b1", "b2"), "c"), identity),
-  rule("start", bag(a="A", b="B", c="C"), identity)
-]
-
-c.compile(rules)
-
-c.print_rules()
-'''

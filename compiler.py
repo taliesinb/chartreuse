@@ -3,10 +3,8 @@ from collections import defaultdict
 from itertools import combinations, groupby
 from rules import rule
 from utils import flatten, identity, stringify, first
-      
-def join_name(*names):
-  return  ''.join(map(stringify, names))
-
+from patterns import normalize
+        
 class context(object):
   def __init__(self):
     self.rules = defaultdict(list)
@@ -14,6 +12,7 @@ class context(object):
 
   def compile(self, rules):
     for r in rules:
+      r.pattern = normalize(r.pattern)
       r.pattern.set_context(self)
       name = r.pattern.compile(r.symbol)
       if name != r.symbol:
@@ -45,6 +44,12 @@ class context(object):
       print "optimization:"
       for a,b in rewrite.items():
         print "\t", a.ljust(20), "->", b
+        
+  def get_rules(self):
+    j = []
+    for r in self.rules.values():
+      j += r
+    return j
 
   def rename_symbol(self, reps):
     for symbol, rulelist in rules:

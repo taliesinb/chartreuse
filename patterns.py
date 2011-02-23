@@ -1,15 +1,26 @@
 from rules import *
 from compiler import *
 
+def join_name(*names):
+  return  ''.join(map(stringify, names))
+
+def normalize(x):
+  if type(x) == list:
+    return seq(*x)
+  if type(x) == str:
+    return sym(x)
+  else:
+    return x
+    
 def singleton(x):
-  if type(x) == str or type(x) == pattern:
+  if type(x) == str or isinstance(x, pattern):
     return [x]
   else:
     return x
 
 class pattern(object):
   def __init__(self, *terms):
-    self.terms = tosyms(terms)
+    self.terms = map(normalize, terms)
     
   def __iter__(self):
     return iter(self.terms)
@@ -25,15 +36,6 @@ class pattern(object):
     
   def append(self, rule):
     self.context.rules[rule.symbol].append(rule)
-
-def tosym(x):
-  if type(x) == str:
-    return sym(x)
-  else:
-    return x
-    
-def tosyms(exps):
-  return map(tosym, exps)
 
 class sym(pattern):
   def __init__(self, name):
@@ -70,7 +72,7 @@ class bag(pattern):
   def __init__(self, **args):
     self.terms = {}
     for k, v in args.items():
-      self.terms[k] = tosym(v)
+      self.terms[k] = normalize(v)
       
   def __iter__(self):
     return iter(self.terms.values())
