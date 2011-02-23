@@ -6,7 +6,7 @@ Chartreuse is a simple [context free](http://en.wikipedia.org/wiki/Context-free_
 
 I wanted to write a chart parser to teach myself more about computational linguistics and to do simple experiments. This project actually turned out to be much easier than I expected, and I completed it in about two weekend afternoons.
 
-I also intend to rewrite this simple parser to JavaScript to provide an open-source parser library that can perform non-trivial work in the browser.
+I also intend to rewrite this simple parser in JavaScript to provide an open-source parser library that can perform parsing client-side.
 
 ## About the grammar
 
@@ -27,21 +27,21 @@ A seperate module can compile more complicated grammar rules down into this simp
 The constructs can be composed, so that a seq may contain bags, etc. Intermediate symbols will be produced by the compiler to represent various "fragments" of a compound grammar rule. 
 The terminal objects of this syntax are always single strings that refer to existing grammar symbols.
 
-### List
+### Sequence
 
-A list such as `[expr0, expr1, ...]` or an instnace of class seq `seq(expr0, expr1, ...)` corresponds to a series of expressions in a fixed order that must be matched left-to-right.
+An instance of class seq `seq(expr0, expr1, ...)` corresponds to a series of expressions in a fixed order that must be matched left-to-right.
 
-### Tuple
+### Alternatives
 
-The instance of class alt `alt(alexpr0, expr1, ...)` corresponds to a series of alternative expressions, exactly one of which has to match.
+An instance of class alt `alt(alexpr0, expr1, ...)` corresponds to a series of alternative expressions, exactly one of which has to match.
 
-### Singleton tuple
+### Optional
 
-The instance of class opt `opt(expr)` refers to an optional expression that may or may not match. Multiple terms can also be used, indicating a series of alternatives, one or zero of which must match.
+An instance of class opt `opt(expr)` refers to an optional expression that can but need not match. Multiple terms can also be used, indicating a series of alternatives, one or zero of which must match.
 
-### Dictionary
+### Bag
 
-The instance of class bag `bag(name=expr0, name1=expr1, ...)` corresponds to a "bag" of clauses. 
+An instance of class bag `bag(name=expr0, name1=expr1, ...)` corresponds to a "bag" of clauses. 
 
 Only one clause is required to match, which is taken to be the first clause, but subsequent clauses can also match, in any order and combination. 
 The value of the resulting symbol is once again a dictionary with the same keys, but with the expressions replaced 
