@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
-from chart_parser import *
-from parser_rule import *
+from chart import *
+from rules import *
 
 tokens = [
   symbol("buffalo", "Buffalo-born", (0,1)),
