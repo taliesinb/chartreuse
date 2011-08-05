@@ -1,9 +1,8 @@
 class symbol(object):
 	def __init__(self, type, value, span):
 	  	self.type = type
-	    self.value = value
-	    self.span = span
-	    
+		self.value = value
+		self.span = span
 	def __repr__(self):
 	    return "{ \"t\":" + str([self.type, self.value]) + ", \"s\":" + str(self.span[0]) + ", \"e\":" + str(self.span[1]) + "}"
 		
@@ -18,8 +17,7 @@ class Trie: #should I add (object) parameter as above? - ROB > TALI
 		length = len(word)
 		for i in range(length - 1): #all characters except the last
 			char = word[i]
-			
-			if not level[char]:
+			if not level.get(char, False):
 				if diff:
 					newQ = True
 					for prefix in self.extras:
@@ -32,12 +30,13 @@ class Trie: #should I add (object) parameter as above? - ROB > TALI
 			level = level[char]
 									# the last character
 		char = word[length-1]
-		if not level[char]:
+		if not level.get(char, False):
 			level[char] = {}
-		if not level[char]["to"]:
+		if not level[char].get("to", False):
 			level[char]["to"] = []
 		level[char]["to"].append(token)
-	
+		#print self.trie
+		
 	def diff(self):
 		for prefix in self.extras:
 			node = self.trie
@@ -55,19 +54,17 @@ class Trie: #should I add (object) parameter as above? - ROB > TALI
 			while level and level != {} and end < length:
 				char = string[end]
 				end += 1
-				
 				if ignore_whitespace:#skip over all the whitespace characters that don't help
-					while !level[char] and re.match("\s", char):
+					while (not level[char]) and re.match("\s", char):
 						char = string[end]
 						end += 1
-						
-				node = level[char]
+				node = level.get(char, False)
 				if node and node == 1:
 					node = fetch_record(string[begin:end]) #what should I use for file IO here? ROB > TALI
 					level[char] = node #reconnects the branch
 					
 				if node:
-					for token in node["to"]:
+					for token in node.get("to",[]):
 						tokens.append(symbol(token[0], token[1], [begin, end]))
 					level = node
 				else: break
