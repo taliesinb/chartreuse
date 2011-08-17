@@ -1,3 +1,23 @@
+import os, json
+
+def fetch_record(prefix): #loading a branch from a file
+	name = os.path.abspath("../branches/" + prefix + ".txt")
+	if os.path.isfile(name):
+		f = open(name, "r")
+		return json.loads(f.read())
+	else:
+		return {}
+	f.close()
+		
+def create_record(prefix, data):
+	if not os.path.isdir("../branches"):
+		os.makedirs("../branches")
+	name = os.path.abspath("../branches/" + prefix + ".txt")
+	f = open(name, "w")
+	dat = json.dumps(data)
+	f.write(dat)
+	f.close()
+
 class symbol(object):
 	def __init__(self, type, value, span):
 	  	self.type = type
@@ -6,11 +26,11 @@ class symbol(object):
 	def __repr__(self):
 	    return "{ \"t\":" + str([self.type, self.value]) + ", \"s\":" + str(self.span[0]) + ", \"e\":" + str(self.span[1]) + "}"
 		
-class Trie: #should I add (object) parameter as above? - ROB > TALI
+class Trie:
 	def __init__(self, trie={}):
 		self.trie = trie
 		self.extras = []
-		self.branches = {} #extra branches for diff
+		#self.branches = {} #extra branches for diff
 		
 	def add(self, word, token, diff=False):
 		level = self.trie
@@ -40,9 +60,9 @@ class Trie: #should I add (object) parameter as above? - ROB > TALI
 	def diff(self):
 		for prefix in self.extras:
 			node = self.trie
-			for char in prefix:
+			for char in prefix[0:-1]:
 				node = node[char]
-			self.branches[prefix] = node[prefix[-1]]
+			create_record(prefix, node[prefix[-1]]) #self.branches[prefix] = node[prefix[-1]]
 			node[prefix[-1]] = 1 #1 is a special value that tells the tokenizer that this branch must be fetched
 			
 	def tokenize(self, string, ignore_whitespace=False):
@@ -69,7 +89,12 @@ class Trie: #should I add (object) parameter as above? - ROB > TALI
 					level = node
 				else: break
 			begin += 1
-			end = begin
+			end = begin #pretty deep
 			level = self.trie
 		return tokens
-			
+		
+	def save(self):
+		create_record("__init__",self.trie)
+		
+	def load(self):
+		self.trie = fetch_record("__init__")
