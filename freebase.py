@@ -76,3 +76,10 @@ class character:
 		self.id = id
 	#TODO: actors, movies, actors in movie, movies for actor
 	#TODO: nth actor to portray
+	
+def all_actors():
+	query = [{"type":"/film/actor","/common/topic/alias":[],"/film/actor/film":{"return":"count"},"name":None,"mid":None}]
+	res = mql(query).sort(key=lambda val:-val.get("/film/actor/film",0))
+	out = {}
+	[out[r["mid"]] = r["/common/topic/alias"].append(r["name"]) for r in res]
+	return out
