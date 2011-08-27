@@ -97,9 +97,9 @@ class bag(pattern):
             sub_rules.add((sub_name, unit_names[k]))
             sub_rules.add((unit_names[k], sub_name))
         for k in sub_rules:
-          self.append(rule(super_name, k, identity))
+          self.append(rule(super_name, list(k), identity))
         
-    rhs = [term.compile(name) for term in self.terms.values()]
+    rhs = [term.compile(unit_name) for term, unit_name in zip(self.terms.values(), unit_names)]
     
     for unit_name, term in zip(unit_names, rhs):
       self.append(rule(unit_name, term, first)) 

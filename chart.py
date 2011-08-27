@@ -125,7 +125,7 @@ class chart(object):
         print
 
   def print_symbols(self):
-    for key, symbol in self.symbols.items():
+    for key, symbol in sorted(self.symbols.items()):
       print str(key).ljust(20)
       for sym in symbol:
         print  "\t\t", str(sym)
