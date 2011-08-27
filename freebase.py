@@ -79,7 +79,16 @@ class character:
 	
 def all_actors():
 	query = [{"type":"/film/actor","/common/topic/alias":[],"/film/actor/film":{"return":"count"},"name":None,"mid":None}]
-	res = mql(query).sort(key=lambda val:-val.get("/film/actor/film",0))
-	out = {}
-	[out[r["mid"]] = r["/common/topic/alias"].append(r["name"]) for r in res]
+	res = mql(query)
+	print res[:10]
+	print 
+	res.sort(key=(lambda val:-val.get("/film/actor/film",0)))
+	out = dict([])
+	for r in res:
+		id = r.get("mid","unknown")
+		name = r.get("name")
+		names = r.get("/common/topic/alias",[])
+		if name != None:
+			names.append(name)
+		out[id] = names
 	return out
