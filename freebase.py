@@ -6,16 +6,32 @@ def rawget(url):
 	page.close()
 	return results
 
-def mql_string(query):
+def mql_string(query,cursor=None):
 	url = "https://api.freebase.com/api/service/mqlread?query={\"query\":"
-	url = url+query+"}"
+	url = url+query
+	if cursor!=None:
+		url = url+",\"cursor\":"+cursor
+	url = url+"}"
 	return rawget(url)
 	
-def mql(dict):
-	res = json.loads(mql_string(json.dumps(dict))).get("result",None)
-	if res==None:
-		raise Exception("no result from freebase")
+def mql(dict,cursor=True,limit=2):
+	if not cursor:
+		res = json.loads(mql_string(json.dumps(dict))).get("result",None)
+		if res==None:
+			raise Exception("no result from freebase")
+		else:
+			return res
 	else:
+		ret = json.loads(mql_string(json.dumps(dict),"true"))
+		cursor = ret.get("cursor")
+		res = ret.get("result",[])
+		while cursor!=False and limit>0:
+			limit = limit - 1
+			ret = json.loads(mql_string(json.dumps(dict),cursor))
+			cursor = ret.get("cursor")
+			res1 = ret.get("result",[])
+			for i in res1:
+				res.append(i)
 		return res
 	
 class movie:
@@ -77,11 +93,9 @@ class character:
 	#TODO: actors, movies, actors in movie, movies for actor
 	#TODO: nth actor to portray
 	
-def all_actors():
-	query = [{"type":"/film/actor","/common/topic/alias":[],"/film/actor/film":{"return":"count"},"name":None,"mid":None}]
-	res = mql(query)
-	print res[:10]
-	print 
+def all_actors():#This needs to be broken down by letter with "name~=":"A*"..."B*"...etc.
+	query = [{"type":"/film/actor","/common/topic/alias":[],"/film/actor/film":{"return":"count"},"name":None,"mid":None,"limit":10000}]
+	res = mql(query,True,10)
 	res.sort(key=(lambda val:-val.get("/film/actor/film",0)))
 	out = dict([])
 	for r in res:
@@ -92,3 +106,6 @@ def all_actors():
 			names.append(name)
 		out[id] = names
 	return out
+	
+def all_movies():
+	query = [{"type":"/film/film","/film/film/gross_revenue":None,"/common/topic/alias":[],"name":None,"mid":None,"sort":"/film/film/gross_revenue"}]
