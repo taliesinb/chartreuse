@@ -14,7 +14,11 @@ def mql_string(query,cursor=None):
 	url = url+"}"
 	return rawget(url)
 	
-def mql(dict,cursor=True,limit=2):
+def mql(dict,limit=1):
+	if limit>1:
+		cursor = True
+	else:
+		cursor = False
 	if not cursor:
 		res = json.loads(mql_string(json.dumps(dict))).get("result",None)
 		if res==None:
@@ -76,6 +80,7 @@ class actor:
 		return [entry.get("id",None) for entry in mql(query)]
 	def characters_in_common(self, actor):
 		query = [{"type": "/film/film_character","id":None,"/film/film_character/portrayed_in_films": [{"actor": {"id":self.id}}],"ns0:/film/film_character/portrayed_in_films": [{"actor": {"id":actor.id}}]}]
+		return [entry.get("id",None) for entry in mql(query)]
 	def nth_movie(self,n):
 		query = [{"type":"/film/film","id":None,"/film/film/starring":{"actor":{"id":self.id}},"initial_release_date":None,"sort": "initial_release_date","limit":n}]
 		res = mql(query)
@@ -90,22 +95,93 @@ class actor:
 class character:
 	def __init__(self, id):
 		self.id = id
-	#TODO: actors, movies, actors in movie, movies for actor
-	#TODO: nth actor to portray
+	def actors(self):
+		query={"id":self.id,"/film/film_character/portrayed_in_films":[{"actor":{"id":None},"film":{"initial_release_date":None},"sort":"film.initial_release_date"}]}
+		res = [entry.get("actor",{"id":None})["id"] for entry in mql(query).get("/film/film_character/portrayed_in_films",[])]
+		fin = []
+		for i in res:
+			try:
+				fin.index(i)
+			except ValueError:
+				fin.append(i)
+		return fin
+	def movies(self):
+		query={"id":self.id,"/film/film_character/portrayed_in_films":[{"film":{"id":None,"initial_release_date":None},"sort":"film.initial_release_date"}]}
+		res = [entry.get("film",{"id":None})["id"] for entry in mql(query).get("/film/film_character/portrayed_in_films",[])]
+		return res
+	def nth_movie(self, n):
+		movies - self.movies()
+		if len(movies)>=(n-1):
+			return movies[n-1]
+		else:
+			return None
+	def actors_in_movie(self, movie):
+		query = {"id":movie.id,"/film/film/starring":[{"character":{"id":self.id},"actor":{"id":None}}]}
+		res = [entry.get("actor",{"id":None})["id"] for entry in mql(query).get("/film/film/starring",[])]
+		return res
+	def movies_for_actor(self,actor):
+		query = {"id":self.id,"/film/film_character/portrayed_in_films":[{"film":{"id":None,"initial_release_date":None},"actor":{"id":actor.id},"sort":"film.initial_release_date"}]}
+		res = [entry.get("film",{"id":None})["id"] for entry in mql(query).get("/film/film_character/portrayed_in_films",[])]
+		return res
+	def num_movies(self,actor):
+		query = {"id":"/en/batman","/film/film_character/portrayed_in_films":{"return":"count"}}
+		return mql(query).get("/film/film_character/portrayed_in_films",0)
+	def num_movies_for_actor(self,actor):
+		query = {"id":"/en/batman","/film/film_character/portrayed_in_films":{"actor":{"id":"/en/adam_west"},"return":"count"}}
+		return mql(query).get("/film/film_character/portrayed_in_films",0)
+	def nth_actor(self,n):
+		actors = self.actors()
+		if len(actors)>=(n-1):
+			return actors[n-1]
+		else:
+			return None
 	
-def all_actors():#This needs to be broken down by letter with "name~=":"A*"..."B*"...etc.
-	query = [{"type":"/film/actor","/common/topic/alias":[],"/film/actor/film":{"return":"count"},"name":None,"mid":None,"limit":10000}]
-	res = mql(query,True,10)
+def all_actors(limit=10):
+	query = [{"type":"/film/actor","/common/topic/alias":[],"/film/actor/film":{"return":"count"},"name":None,"mid":None}]
+	res = mql(query,limit)
 	res.sort(key=(lambda val:-val.get("/film/actor/film",0)))
-	out = dict([])
+	out = []
 	for r in res:
 		id = r.get("mid","unknown")
 		name = r.get("name")
 		names = r.get("/common/topic/alias",[])
 		if name != None:
 			names.append(name)
-		out[id] = names
+		out.append((id,names))
 	return out
 	
-def all_movies():
-	query = [{"type":"/film/film","/film/film/gross_revenue":None,"/common/topic/alias":[],"name":None,"mid":None,"sort":"/film/film/gross_revenue"}]
+def all_movies(limit=10):
+	query = [{"type":"/film/film","/film/film/gross_revenue":None,"/common/topic/alias":[],"name":None,"mid":None,"/film/film/initial_release_date":None}]
+	res = mql(query,limit)
+	num_map = {'0':'9', '1':'8', '2':'7', '3':'6', '4':'5', '5':'4', '6':'3', '7':'2', '8':'1', '9':'0'}
+	def invert_date(val):
+		newstr = "";
+		dat = val.get("/film/film/initial_release_date","9999-99-99");
+		for charnum in range(len(dat)):
+			newstr += num_map.get(dat[charnum],dat[charnum])
+		return newstr
+	res.sort(key=invert_date)
+	out = []
+	for r in res:
+		id = r.get("mid","unknown")
+		name = r.get("name")
+		names = r.get("/common/topic/alias",[])
+		if name != None:
+			names.append(name)
+		out.append((id,names))
+	return out
+	
+def all_characters(limit=10):
+	query = [{"type":"/film/film_character","name":None,"/common/topic/alias":[],"/film/film_character/portrayed_in_films":{"return":"count"}}]
+	res = mql(query,limit)
+	res.sort(key=(lambda val:val.get("/film/film_character/portrayed_in_films",0)))
+	out = []
+	for r in res:
+		id = r.get("mid","unknown")
+		name = r.get("name")
+		names = r.get("/common/topic/alias",[])
+		if name != None:
+			names.append(name)
+		out.append((id,names))
+	return out
+	
