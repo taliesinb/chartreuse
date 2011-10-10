@@ -36,5 +36,6 @@ def make_trie(test=False):
 	for i in range(len(characterlist)):
 		for j in characterlist[i][1]:
 			t.add(j,("char",characterlist[i][0]),i<TRUNK_CHARACTERS)
+	t.diff()
 
 make_trie(True)

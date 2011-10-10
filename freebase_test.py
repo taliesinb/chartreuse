@@ -20,4 +20,4 @@ matt_dillon = actor("/en/matt_dillon")
 print kevin_bacon.nth_movie(5)
 print kevin_bacon.movies_in_common(matt_dillon)
 
-print len(all_actors().keys())
+print len(all_actors())
