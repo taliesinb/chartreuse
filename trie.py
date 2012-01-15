@@ -71,7 +71,7 @@ class trie:
 	def finish(self): #only use if you're sure you're done
 		self.db.close()
 		
-	def add(self, word, token):
+	def add(self, word, token, ):
 		token.append(0)
 		level = self.trie
 		length = len(word)
@@ -81,9 +81,9 @@ class trie:
 		for i in range(length): #all characters except the last
 			char = word[i]
 			next_level = level.get(char, False)
+			prefix = word[:i+1]
 			if not next_level:
 				if diff:
-					prefix = word[:i+1]
 					next_level = self.db.set(prefix, trie_dict(self.trie.max_tokens))
 					level[char] = 1
 					next_level.count+=1
@@ -93,7 +93,7 @@ class trie:
 					level[char] = next_level
 			elif next_level==1:
 				next_level = self.db.get(prefix,{}) #I no longer reattach the unsnapped branch
-				diff = next_level.count > next_level.max
+				diff = next_level.count > next_level.max_tokens
 			level = next_level
 			
 			if i==length-1:	#the last character
@@ -102,38 +102,42 @@ class trie:
 				#print token
 				level["to"].append(token)
 		
-	def tokenize(self, string, ignore_whitespace=True):
+	def tokenize(self, string, ignore="[^A-Za-z0-9]"):
 		tokens = []
 		level = self.trie
 		begin = end = 0
 		length = len(string)
 		while begin < length:
+			if re.match(ignore,string[begin]):
+				begin+=1
+				end = begin
+				continue
 			while level and level != {} and end < length:
 				char = string[end]
-				end += 1
-				if ignore_whitespace:#skip over all the whitespace characters that don't help
-					while (not level.get("char",False)) and re.match("\s", char):
-						end += 1
-						char = string[end]
 				node = level.get(char, False)
-				if node == 1:
-					node = self.db.get(string[begin:end],False)
-					#level[char] = node #reconnects the branch
-					
+				while not node and re.match(ignore, char) and end<length-1:
+					end+=1
+					char = string[end]
+					node = level.get(char,False)
+				if node==1:
+					node = self.db.get(string[begin:end])
 				if node:
-					for token in node.get("to",[]):
-						#lookahead for whitespace
-						while end<len(string) and re.match("\s",string[end]):
-							end = end+1
+					toks = node.get("to",[])
+					if len(toks)>0:
+						suffix = end
+						while suffix+1<length and re.match(ignore, string[suffix+1]):
+							suffix += 1
+							
+						for toki in toks:
+							if len(toki)>2:
+								pop = toki[2]
+							else:
+								pop = 1
+								toki.append(1)
+							tokens.append(symbol(toki[0], toki[1], [begin, suffix+1], pop));
 						
-						if len(token)>2:
-							token[2] += 1 #log the hit
-						else:
-							token.append(1)
-						tokens.append(symbol(token[0], token[1], [begin, end], token[2]))
-						 #logging the popularity
-					level = node
-				else: break
+				level = node
+				end+=1
 			begin += 1
 			end = begin #pretty deep
 			level = self.trie
@@ -144,10 +148,13 @@ class trie:
 			for t in tok:
 				for c in range(t.span[0],t.span[1]):
 					holes[c] = 1
+
 			for h in range(len(holes)):
 				if holes[h]==0 and (h==0 or holes[h-1]==1):
 					h_spans.append(h)
-				elif holes[h]==1 and h!=0 and holes[h-1]==0:
+				if holes[h]==0 and h==len(holes)-1:
+					h_spans.append(h+1)
+				if holes[h]==1 and h!=0 and holes[h-1]==0:
 					h_spans.append(h)
 			
 			returns = [symbol("hole",st[h_spans[i]:h_spans[i+1]],[h_spans[i],h_spans[i+1]]) 
