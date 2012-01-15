@@ -12,6 +12,7 @@ def rules(symbol, patterns, action=identity):
 class rule(object):
   def __init__(self, symbol, pattern, action=identity):
     self.symbol = symbol
+    if type(pattern) == str: pattern = [pattern]
     self.pattern = pattern
     self.action = action
   
